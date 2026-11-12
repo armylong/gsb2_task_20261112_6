@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>本地音频批量处理工作台</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <h1>本地音频批量处理工作台</h1>
+    <div class="topbar-right">
+      <label class="concurrency">
+        并行任务数
+        <input type="number" id="concurrency-input" min="1" max="8" value="2">
+      </label>
+      <button class="btn btn-ghost" id="save-concurrency" type="button">保存</button>
+      <span class="hint" id="ffmpeg-hint"></span>
+    </div>
+  </header>
+
+  <main class="layout">
+    <!-- ============ 导入区 ============ -->
+    <section class="card">
+      <h2>1. 导入录音</h2>
+      <div class="import-row">
+        <div class="dropzone" id="dropzone" tabindex="0">
+          <p><strong>点击选择</strong> 或拖拽音频到这里</p>
+          <p class="hint">wav / mp3 / flac / ogg / m4a / aac / aiff / opus, 单文件 ≤ <span id="max-upload-label">500</span>MB</p>
+          <input type="file" id="file-input" accept="audio/*,.wav,.mp3,.flac,.ogg,.oga,.m4a,.aac,.wma,.aiff,.aif,.opus" hidden multiple>
+        </div>
+        <div class="import-local">
+          <p class="hint">或导入服务器本机路径(文件会复制进工作区, 原文件不动)</p>
+          <div class="local-form">
+            <input type="text" id="local-path" placeholder="/Users/me/recording.wav">
+            <button class="btn" id="import-local-btn" type="button">导入路径</button>
+          </div>
+        </div>
+      </div>
+      <div id="import-message" class="banner" hidden></div>
+    </section>
+
+    <!-- ============ 源文件列表 ============ -->
+    <section class="card">
+      <h2>2. 源文件与文件信息</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th><th>文件名</th><th>时长</th><th>采样率</th>
+              <th>声道</th><th>峰值</th><th>大小</th><th>操作</th>
+            </tr>
+          </thead>
+          <tbody id="sources-tbody">
+            <tr class="empty-row"><td colspan="8">还没有导入文件</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ============ 新建任务 ============ -->
+    <section class="card" id="job-form-card" hidden>
+      <h2>3. 为「<span id="job-form-source"></span>」创建处理任务</h2>
+      <div class="form-grid">
+        <label>输出格式
+          <select id="opt-format"></select>
+        </label>
+        <label>输出采样率
+          <select id="opt-sample-rate"></select>
+        </label>
+        <label>响度目标 (LUFS, 留空不调整)
+          <input type="number" id="opt-loudness" min="-70" max="-5" step="0.5" placeholder="例如 -14">
+        </label>
+        <label>淡入 / 淡出时长 (秒)
+          <input type="number" id="opt-fade" min="0" max="60" step="0.1" value="0">
+        </label>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-primary" id="submit-job" type="button">提交任务</button>
+        <button class="btn btn-ghost" id="cancel-form" type="button">取消</button>
+        <span class="hint">同一文件存在进行中任务时, 重复提交会被明确拒绝(409), 不会静默吞掉</span>
+      </div>
+      <div id="job-form-message" class="banner" hidden></div>
+    </section>
+
+    <!-- ============ 任务列表 ============ -->
+    <section class="card">
+      <h2>4. 任务队列 <span class="hint" id="queue-summary"></span></h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th><th>源文件</th><th>处理参数</th><th>状态</th>
+              <th>进度</th><th>输出 / 错误</th><th>操作</th>
+            </tr>
+          </thead>
+          <tbody id="jobs-tbody">
+            <tr class="empty-row"><td colspan="7">还没有任务</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <!-- ============ 前后对比弹窗 ============ -->
+  <div class="modal-backdrop" id="compare-modal" hidden>
+    <div class="modal" role="dialog" aria-modal="true">
+      <div class="modal-head">
+        <h3>处理前后对比 · 任务 <span id="compare-job-id"></span></h3>
+        <button class="btn btn-ghost" id="close-compare" type="button">关闭</button>
+      </div>
+      <div class="compare-cols">
+        <div class="compare-col">
+          <h4>处理前(源文件, 只读)</h4>
+          <audio id="audio-source" controls preload="none"></audio>
+          <dl id="compare-source-meta" class="meta-list"></dl>
+        </div>
+        <div class="compare-col">
+          <h4>处理后(输出文件)</h4>
+          <audio id="audio-output" controls preload="none"></audio>
+          <dl id="compare-output-meta" class="meta-list">
+            <dt class="muted">加载中…</dt><dd></dd>
+          </dl>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
